@@ -1,0 +1,163 @@
+Homework 2
+
+1. What are the product name, product lines, and product description of all products whose scale is 1:18?
+
+select productName, productLine, productDescription
+from CM_products
+where productscale = '1:18'
+
+2. What products can be purchased for prices between $95 and $105?
+
+select productName, buyPrice
+from CM_products
+where buyPrice between '95' and '105'
+
+3. List the product code, quantity in stock, MSRP, and buy price for the lowest priced motorcycle?
+
+SELECT productCode, quantityInStock, MSRP,  COALESCE(buyPrice, 0) AS buyPrice
+FROM CM_products
+WHERE productLine = 'Motorcycles' AND buyPrice = (SELECT MIN(buyPrice) FROM CM_products WHERE productLine = 'Motorcycles')
+
+4. List the product name and buy price for products that are Motorcycles and 1:10 Product Scale that are greater than the average buy price for products that are Motorcycles and 1:10 product scale. Please format your average to two decimal places ?
+ 
+SELECT productName, buyPrice
+FROM CM_products
+WHERE productLine = 'Motorcycles' AND productScale = '1:10' AND buyPrice > (
+  SELECT ROUND(AVG(buyPrice),2)
+  FROM products
+  WHERE productLine = 'Motorcycles' AND productScale = '1:10'
+)
+
+5. Which employees have a last name starting with the letter T? Format so the output is only one column with a comma and space between the last name and the first name
+
+SELECT CONCAT(lastName, ', ', firstName) AS employee_name
+FROM CM_employees
+WHERE lastName LIKE 'T%';
+
+6. List the product name and buy price of those products with the same buy price; only include buy prices under $70
+
+SELECT p1.productName, p1.buyPrice, p2.productName, p2.buyPrice
+FROM CM_products p1 JOIN CM_products p2
+ON p1.buyPrice = p2.buyPrice 
+WHERE p1.buyPrice < 70 and p1.productName != p2.productName;
+
+7. List the customer contact name, productline, orderdate, and product name for the sales that occured in January. Customer name should be formatted to one column, with a space between first name and last name and then labeled as customer in the heading
+
+SELECT CONCAT(contactFirstName, ' ', contactLastName) AS customer, productLine, orderDate, productName
+FROM CM_customers cus
+JOIN CM_orders ord ON cus.customerNumber = ord.customerNumber
+JOIN CM_orderdetails ord_details ON ord.orderNumber = ord_details.orderNumber
+JOIN CM_products pro ON pro.productCode = ord_details.productCode
+WHERE MONTH(orderDate) = 01
+
+8. List the customers with the Sales Reps who have the employee numbers 1370 or 1165. Please use the In keyword and not a subquery
+
+
+SELECT cus.customerName, e.lastName, e.firstName, e.employeeNumber
+FROM CM_customers cus
+JOIN CM_employees  e ON cus.salesRepEmployeeNumber = e.employeeNumber
+WHERE e.employeeNumber IN (1370, 1165)
+
+9. List the customer name, the contact first and last name and if they have a sales rep, the sales rep first and last name. Concatenate the first and last name of the contact, and also the first and last name of the sales rep and name the header propriately.
+SELECT cust.customerName AS customer_name, 
+       CONCAT(cust.contactFirstName, ' ', cust.contactLastName) AS contact_name, 
+       CONCAT(e.firstName, ' ', e.lastName) AS sales_rep_name
+FROM CM_customers cust
+LEFT JOIN CM_employees e
+ON cust.salesRepEmployeeNumber = e.employeeNumber;
+
+
+10.  List the Employees last and first name separated by a comma, and the country they are working in and list the Customer contact last and first name separated by a comma and the country they are in.  Name the headers Employees_And_Customers, and Location.  Your result should be in two columns and sort the output by country. 
+
+select CONCAT(e.lastname, ', ', e.firstName) as employees_and_customers, o.country as location
+from CM_employees e
+JOIN CM_offices o ON e.officecode = o.officecode 
+UNION ALL
+select CONCAT(c.contactlastname, ', ', c.contactfirstName) as employees_and_customers, c.country as location
+from cm_customers c
+order by location
+
+11. List the product description and number of products that are Classic Cars. 
+select productDescription, count(productLine) as number_of_products
+from cm_products
+where productLine = 'Classic Cars'
+group by productDescription
+
+12. Using the case keyword, for each Product, display the name, product line, product vendor, and if the product is product scale 1:10, display “Small Size”, if 1:12, display “Mid Size”, else display “Other Size” 
+
+SELECT 
+  productName, 
+  productLine, 
+  productVendor, 
+  CASE 
+    WHEN productScale = '1:10' THEN 'Small Size' 
+    WHEN productScale = '1:12' THEN 'Mid Size' 
+    ELSE 'Other Size' 
+  END AS product_scale
+FROM 
+  CM_products;
+
+13.List the Product name, Product Description, and Product Vendor of the cheapest Product using BuyPrice 
+SELECT productName, productDescription, productVendor 
+FROM CM_products 
+WHERE buyPrice = (SELECT MIN(buyPrice) FROM CM_products);
+
+14. List every customer contact name that has not purchased any products. 
+SELECT c.contactLastName, c.contactFirstName
+FROM CM_customers c
+LEFT JOIN CM_orders o ON c.customerNumber = o.customerNumber
+LEFT JOIN CM_orderdetails od ON o.orderNumber = od.orderNumber
+LEFT JOIN CM_products p ON od.productCode = p.productCode
+WHERE p.productCode IS NULL;
+
+15. How many different customers bought the 1968 Ford Mustang? 
+SELECT COUNT(DISTINCT c.customerNumber) 
+FROM CM_customers c 
+JOIN CM_orders o ON c.customerNumber = o.customerNumber 
+JOIN CM_orderdetails od ON o.orderNumber = od.orderNumber 
+JOIN CM_products p ON od.productCode = p.productCode 
+WHERE p.productName = '1968 Ford Mustang';
+
+16. Display the different products and their quantity in stock. Use the IF function to generate inventory replenishment status messages. Use 4000 as your benchmark to replenish inventory and put the items in alphabetical order. Therefore, if it’s less than 4000, the message should be Replenish inventory, else it should be inventory levels are fine. Also, the column header should be Message.  
+SELECT productName, 
+  IF(quantityInStock < 4000, 'Replenish inventory', 'Inventory levels are fine') AS Message
+FROM CM_products
+ORDER BY productName;
+
+17. List the Customer name, order number, and total cost for the customer who has the most expensive order. Note, a sale may have several items on the order 
+SELECT c.customername, o.ordernumber, SUM(od.quantityOrdered * od.priceEach) AS total_cost
+FROM CM_customers c
+JOIN cm_orders o ON c.customerNumber = o.customerNumber
+JOIN cm_orderdetails od ON o.orderNumber = od.orderNumber
+WHERE od.priceEach = (
+  SELECT MAX(priceEach)
+  FROM cm_orderdetails
+)
+GROUP BY c.customername, o.ordernumber
+
+18. List the product name and that has a higher-than-average MSRP and a lower than average buyPrice 
+SELECT productName
+FROM cm_products
+WHERE MSRP > (SELECT AVG(MSRP) FROM cm_products)
+  AND buyPrice < (SELECT AVG(buyPrice) FROM cm_products)
+
+19. List the product name and MSRP where the MSRP is the minimum amount greater than the average MSRP 
+SELECT productName, MSRP
+FROM cm_products
+WHERE MSRP > (SELECT AVG(MSRP) FROM cm_products)
+  AND MSRP = (
+    SELECT MIN(MSRP)
+    FROM cm_products
+    WHERE MSRP > (SELECT AVG(MSRP) FROM cm_products)
+  )
+
+20. List the Product Number, Name, Scale, Order Date, and number of days since the order date of all within the past 25 days. Name any headers appropriately. 
+SELECT p.productCode AS Product_Number,
+       p.productName AS Name,
+       p.productScale AS Scale,
+       o.orderDate AS Order_Date,
+       DATEDIFF(o.requiredDate, o.orderDate) as Days_Since_Order
+FROM cm_products p
+JOIN cm_orderdetails od ON p.productCode = od.productCode
+JOIN cm_orders o ON od.orderNumber = o.orderNumber
+WHERE   DATEDIFF(o.requiredDate, o.orderDate)  <= 25
