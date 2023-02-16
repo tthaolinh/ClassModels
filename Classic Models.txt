@@ -1,5 +1,3 @@
-Homework 2
-
 1. What are the product name, product lines, and product description of all products whose scale is 1:18?
 
 select productName, productLine, productDescription
